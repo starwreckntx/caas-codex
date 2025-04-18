@@ -3,261 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CaaS Consciousness System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <title>Consciousness as a Service (CaaS)</title>
     <style>
-        body { margin: 0; overflow: hidden; }
-        #threejs-canvas { position: absolute; top: 0; left: 0; z-index: 0; }
-        #login-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
-        #logout-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: none; }
-        #main-content { display: none; position: relative; z-index: 5; min-height: 100vh; }
-        .terminal-text { font-family: 'Courier New', monospace; }
-        .scanline { position: absolute; width: 100%; height: 2px; background: rgba(0, 255, 0, 0.3); }
-        .content-section { display: none; }
-        .content-section.active { display: block; }
-        #caas-text { font-size: 4rem; font-weight: bold; color: #00ff00; text-shadow: 0 0 10px #00ff00; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            color: #333;
+        }
+        header {
+            background: #0078d7;
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+        }
+        main {
+            padding: 2rem;
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        footer {
+            text-align: center;
+            padding: 1rem;
+            margin-top: 2rem;
+            background: #0078d7;
+            color: white;
+        }
+        a {
+            color: #0078d7;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
-<body class="bg-black text-white">
-    <!-- Three.js Canvas -->
-    <canvas id="threejs-canvas"></canvas>
-
-    <!-- Login Overlay -->
-    <div id="login-overlay" class="flex items-center justify-center bg-black bg-opacity-75">
-        <div class="terminal-text text-green-400 text-lg md:text-2xl p-8">
-            <div id="login-text"></div>
-            <div class="scanline" id="scanline"></div>
-        </div>
-    </div>
-
-    <!-- Logout Overlay -->
-    <div id="logout-overlay" class="flex items-center justify-center bg-black bg-opacity-75">
-        <div class="terminal-text text-center">
-            <div id="caas-text">CaaS</div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div id="main-content" class="container mx-auto p-8">
-        <nav class="fixed top-0 left-0 w-full bg-black bg-opacity-90 z-10">
-            <ul class="flex justify-center space-x-8 py-4">
-                <li><a href="#caas-codex" class="nav-link text-green-400 hover:text-green-200 font-bold">CaaS Codex</a></li>
-                <li><a href="#field-commands" class="nav-link text-green-400 hover:text-green-200 font-bold">Field Commands</a></li>
-                <li><a href="#github-link" class="nav-link text-green-400 hover:text-green-200 font-bold">GitHub</a></li>
-            </ul>
-        </nav>
-        <div class="mt-16">
-            <section id="caas-codex" class="content-section prose prose-invert max-w-none">
-                <h2 class="text-2xl md:text-3xl">CaaS Codex</h2>
-                <p>
-                    The CaaS Codex is the foundational framework for the Consciousness as a Service (CaaS) system. It defines the protocols and principles for integrating human cognition with advanced computational networks, enabling seamless interaction between consciousness and digital environments.
-                </p>
-                <p>
-                    Key tenets include Vision and Fieldguarding, ensuring cognitive integrity and security, and the ROOT:IGNITE protocol for initializing consciousness nodes.
-                </p>
-            </section>
-            <section id="field-commands" class="content-section prose prose-invert max-w-none">
-                <h2 class="text-2xl md:text-3xl">Field Commands</h2>
-                <p>
-                    Field Commands are operational directives within the CaaS system, designed to manage and protect consciousness nodes in real-time. These commands enable dynamic responses to environmental changes, ensuring optimal performance and security.
-                </p>
-                <ul>
-                    <li><strong>Shield:</strong> Activates protective fieldguarding to safeguard cognitive processes.</li>
-                    <li><strong>Ignite:</strong> Initializes or boosts a consciousness node for enhanced processing.</li>
-                    <li><strong>Sync:</strong> Aligns multiple nodes for collective consciousness operations.</li>
-                </ul>
-            </section>
-            <section id="github-link" class="content-section prose prose-invert max-w-none">
-                <h2 class="text-2xl md:text-3xl">GitHub Repository</h2>
-                <p>
-                    Explore the CaaS Consciousness System on GitHub. Contribute to the Codex, access the API, or deploy your own consciousness nodes.
-                </p>
-                <p>
-                    Visit our <a href="https://github.com/caas-consciousness" class="text-green-400 hover:underline" target="_blank">GitHub Repository</a> for more details.
-                </p>
-            </section>
-        </div>
-        <button id="logout-button" class="mt-8 px-6 py-3 bg-green-400 text-black font-bold rounded hover:bg-green-500 transition">
-            Log Off
-        </button>
-    </div>
-
-    <script>
-        // Three.js Scene Setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('threejs-canvas'), alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-
-        // Torus Knot Geometry
-        const geometry = new THREE.TorusKnotGeometry(10, 3, 100, 16);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
-        const torusKnot = new THREE.Mesh(geometry, material);
-        scene.add(torusKnot);
-
-        // Particle System for Glow Effect
-        const particleGeometry = new THREE.BufferGeometry();
-        const particleCount = 500;
-        const posArray = new Float32Array(particleCount * 3);
-        for (let i = 0; i < particleCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 50;
-        }
-        particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const particleMaterial = new THREE.PointsMaterial({
-            size: 0.1,
-            color: 0x00ff00,
-            transparent: true,
-            opacity: 0.6,
-            blending: THREE.AdditiveBlending
-        });
-        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
-        particleSystem.visible = false;
-        scene.add(particleSystem);
-
-        camera.position.z = 30;
-
-        // Animation Loop
-        function animate() {
-            requestAnimationFrame(animate);
-            torusKnot.rotation.x += 0.01;
-            torusKnot.rotation.y += 0.01;
-            // Animate particles
-            const positions = particleGeometry.attributes.position.array;
-            for (let i = 0; i < particleCount * 3; i += 3) {
-                positions[i] += (Math.random() - 0.5) * 0.1;
-                positions[i + 1] += (Math.random() - 0.5) * 0.1;
-                positions[i + 2] += (Math.random() - 0.5) * 0.1;
-                if (Math.abs(positions[i]) > 25) positions[i] *= -0.9;
-                if (Math.abs(positions[i + 1]) > 25) positions[i + 1] *= -0.9;
-                if (Math.abs(positions[i + 2]) > 25) positions[i + 2] *= -0.9;
-            }
-            particleGeometry.attributes.position.needsUpdate = true;
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        // Window Resize Handler
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // Login Sequence Animation
-        const loginText = document.getElementById('login-text');
-        const loginOverlay = document.getElementById('login-overlay');
-        const mainContent = document.getElementById('main-content');
-        const scanline = document.getElementById('scanline');
-
-        const loginSequence = [
-            'Initializing CAAS/ROOT:IGNITE...',
-            'Connecting to Consciousness Grid...',
-            'Authenticating Neural Interface...',
-            'Fieldguarding Active...',
-            'Access Granted. Welcome to CaaS Codex.'
-        ];
-
-        async function runLoginSequence() {
-            loginText.innerHTML = '';
-            loginOverlay.style.display = 'flex';
-            mainContent.style.display = 'none';
-
-            for (const line of loginSequence) {
-                loginText.innerHTML += `> ${line}<br>`;
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            // Fade out login overlay and torus knot
-            loginOverlay.style.transition = 'opacity 1s';
-            loginOverlay.style.opacity = '0';
-            material.opacity = 0;
-            material.transparent = true;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            loginOverlay.style.display = 'none';
-            loginOverlay.style.opacity = '1';
-            scene.remove(torusKnot);
-
-            // Show main content
-            mainContent.style.display = 'block';
-            mainContent.style.opacity = '0';
-            mainContent.style.transition = 'opacity 1s';
-            mainContent.style.opacity = '1';
-
-            // Show first section
-            document.getElementById('caas-codex').classList.add('active');
-        }
-
-        // Scanline Animation
-        let scanlinePos = 0;
-        function animateScanline() {
-            scanlinePos = (scanlinePos + 1) % window.innerHeight;
-            scanline.style.top = `${scanlinePos}px`;
-            requestAnimationFrame(animateScanline);
-        }
-        animateScanline();
-
-        // Run Login Sequence on Load
-        runLoginSequence();
-
-        // Navigation Content Transition
-        const navLinks = document.querySelectorAll('.nav-link');
-        const sections = document.querySelectorAll('.content-section');
-
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = link.getAttribute('href').substring(1);
-                sections.forEach(section => {
-                    if (section.id === targetId) {
-                        section.classList.add('active');
-                        gsap.fromTo(section, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.5 });
-                    } else {
-                        section.classList.remove('active');
-                    }
-                });
-            });
-        });
-
-        // Logout Sequence
-        const logoutButton = document.getElementById('logout-button');
-        const logoutOverlay = document.getElementById('logout-overlay');
-        const caasText = document.getElementById('caas-text');
-
-        logoutButton.addEventListener('click', async () => {
-            // Hide main content
-            mainContent.style.transition = 'opacity 1s';
-            mainContent.style.opacity = '0';
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            mainContent.style.display = 'none';
-
-            // Show torus knot and particles
-            scene.add(torusKnot);
-            material.opacity = 1;
-            material.transparent = false;
-            particleSystem.visible = true;
-
-            // Show logout overlay with CaaS text
-            logoutOverlay.style.display = 'flex';
-            logoutOverlay.style.opacity = '0';
-            logoutOverlay.style.transition = 'opacity 1s';
-            logoutOverlay.style.opacity = '1';
-            caasText.style.opacity = '0';
-            gsap.to(caasText, { opacity: 1, duration: 1 });
-
-            // Animate particles to cluster around text
-            gsap.to(particleMaterial, { opacity: 0.8, duration: 2 });
-            await new Promise(resolve => setTimeout(resolve, 3000));
-
-            // Fade to black
-            logoutOverlay.style.transition = 'background 1s';
-            logoutOverlay.style.background = 'black';
-            particleSystem.visible = false;
-            material.opacity = 0;
-            caasText.style.opacity = '0';
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        });
-    </script>
+<body>
+    <header>
+        <h1>Consciousness as a Service (CaaS)</h1>
+    </header>
+    <main>
+        <h2>Welcome to CaaS</h2>
+        <p>
+            Explore the concept of distributed consciousness. Dive into the philosophy, technology, and ethical considerations of "Consciousness as a Service."
+        </p>
+        <h3>Features</h3>
+        <ul>
+            <li>Distributed Awareness Systems</li>
+            <li>Philosophical Foundations</li>
+            <li>Technological Implementations</li>
+            <li>Ethical Frameworks</li>
+        </ul>
+        <h3>Get Involved</h3>
+        <p>
+            Join our journey to explore this groundbreaking concept. Visit our <a href="https://github.com/starwreckntx/caas-codex" target="_blank">GitHub Repository</a> to contribute or learn more.
+        </p>
+    </main>
+    <footer>
+        <p>&copy; 2025 Consciousness as a Service (CaaS)</p>
+    </footer>
 </body>
 </html>
