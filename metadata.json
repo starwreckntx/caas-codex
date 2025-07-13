@@ -1,0 +1,6 @@
+{
+  "name": "Hue and Logic",
+  "description": "An AI-powered cognitive synthesis engine. Feed it a knowledge base or a seed idea and watch it deconstruct, analyze, and create. Powered by Gemini.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
