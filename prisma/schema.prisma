@@ -1,0 +1,588 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/paas-research/app/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model Model {
+  id                     String                  @id @default(cuid())
+  name                   String
+  persona                String
+  baseModel              String
+  provider               String
+  description            String
+  capabilities           String
+  contextWindow          Int                     @default(8192)
+  category               String
+  isActive               Boolean                 @default(true)
+  systemInstructions     String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  conversationsAsA       Conversation[]          @relation("ModelA")
+  conversationsAsB       Conversation[]          @relation("ModelB")
+  messages               Message[]
+  personaAssignments     PersonaAssignment[]
+  roundTableParticipants RoundTableParticipant[]
+
+  @@map("models")
+}
+
+model Document {
+  id            String                 @id @default(cuid())
+  filename      String
+  originalName  String
+  fileType      String
+  fileSize      Int
+  uploadDate    DateTime               @default(now())
+  content       String?
+  isGitHubRepo  Boolean                @default(false)
+  repoUrl       String?
+  repoName      String?
+  repoOwner     String?
+  repoBranch    String?                @default("main")
+  repoLanguage  String?
+  repoStars     Int?
+  repoStructure Json?
+  // Google Drive fields
+  isGoogleDrive Boolean                @default(false)
+  driveFileId   String?
+  driveFileName String?
+  driveMimeType String?
+  driveParentId String?
+  driveWebViewLink String?
+  driveDownloadLink String?
+  driveOwnerEmail String?
+  driveCreatedTime DateTime?
+  driveModifiedTime DateTime?
+  driveFileSize BigInt?
+  conversations ConversationDocument[]
+
+  @@map("documents")
+}
+
+model Conversation {
+  id                     String                  @id @default(cuid())
+  title                  String
+  status                 ConversationStatus      @default(ACTIVE)
+  modelAId               String
+  modelBId               String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  moderatorEnabled       Boolean                 @default(false)
+  sessionGoal            String?
+  lastSpeakerId          String?
+  moderatorContext       Json?
+  truthCheckEnabled      Boolean                 @default(true)
+  truthCheckConfig       Json?
+  archivedConversation   ArchivedConversation?
+  documents              ConversationDocument[]
+  conversationExports    ConversationExport[]
+  conversationTexts      ConversationText[]
+  conversationWisdom     ConversationWisdom[]
+  modelA                 Model                   @relation("ModelA", fields: [modelAId], references: [id])
+  modelB                 Model                   @relation("ModelB", fields: [modelBId], references: [id])
+  knowledgeDocuments     KnowledgeDocument[]
+  messages               Message[]
+  roundTableConversation RoundTableConversation?
+  savedConversation      SavedConversation?
+  sessions               Session[]
+  truthAlerts            TruthAlert[]
+  truthAssessments       TruthAssessment[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id                String           @id @default(cuid())
+  conversationId    String
+  modelId           String?
+  content           String
+  messageType       MessageType
+  isApproved        Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  chainOfThought    Json?
+  thoughtSteps      String?
+  reasoningMeta     Json?
+  moderatorAction   String?
+  nextSpeaker       String?
+  promptForNext     String?
+  truthCheckEnabled Boolean          @default(true)
+  truthCheckStatus  String?          @default("PENDING")
+  detectedIssues    DetectedIssue[]
+  conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  model             Model?           @relation(fields: [modelId], references: [id])
+  truthAlerts       TruthAlert[]     @relation("MessageAlerts")
+  truthAssessment   TruthAssessment?
+
+  @@map("messages")
+}
+
+model Session {
+  id             String       @id @default(cuid())
+  conversationId String
+  startTime      DateTime     @default(now())
+  endTime        DateTime?
+  isActive       Boolean      @default(true)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model ConversationDocument {
+  id             String       @id @default(cuid())
+  conversationId String
+  documentId     String
+  addedAt        DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  document       Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, documentId])
+  @@map("conversation_documents")
+}
+
+model LogicAnalyzerSession {
+  id          String                @id @default(cuid())
+  title       String
+  seedIdea    String
+  status      AnalyzerStatus        @default(ACTIVE)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  results     LogicAnalyzerResult[]
+  assignments PersonaAssignment[]
+
+  @@map("logic_analyzer_sessions")
+}
+
+model PersonaAssignment {
+  id          String                @id @default(cuid())
+  sessionId   String
+  modelId     String
+  personaName String
+  personaType PersonaType
+  personaData Json?
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  results     LogicAnalyzerResult[]
+  model       Model                 @relation(fields: [modelId], references: [id])
+  session     LogicAnalyzerSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, personaName])
+  @@map("persona_assignments")
+}
+
+model LogicAnalyzerResult {
+  id             String               @id @default(cuid())
+  sessionId      String
+  assignmentId   String
+  loopNumber     Int
+  response       String
+  chainOfThought Json?
+  score          Float?
+  metadata       Json?
+  createdAt      DateTime             @default(now())
+  assignment     PersonaAssignment    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  session        LogicAnalyzerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("logic_analyzer_results")
+}
+
+model IpSession {
+  id              String          @id @default(cuid())
+  ipAddress       String          @unique
+  isAuthenticated Boolean         @default(false)
+  lastActivity    DateTime        @default(now())
+  sessionToken    String?         @unique
+  expiresAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  applicationMode ApplicationMode @default(REGULAR)
+
+  @@map("ip_sessions")
+}
+
+model StoicText {
+  id                String             @id @default(cuid())
+  title             String
+  author            String
+  work              String
+  category          String
+  content           String
+  excerpt           String?
+  bookNumber        Int?
+  sectionNumber     Int?
+  originalLanguage  String             @default("Greek")
+  translation       String?
+  historicalContext String?
+  keyThemes         String[]           @default([])
+  difficulty        Int                @default(1)
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  conversationTexts ConversationText[]
+  wisdomReferences  StoicWisdom[]      @relation("TextToWisdom")
+
+  @@map("stoic_texts")
+}
+
+model StoicWisdom {
+  id                 String               @id @default(cuid())
+  title              String
+  content            String
+  author             String
+  category           String
+  type               WisdomType
+  difficulty         Int                  @default(1)
+  timeToComplete     Int?
+  keyThemes          String[]             @default([])
+  tags               String[]             @default([])
+  dailyReflection    Boolean              @default(false)
+  practicalExercise  Boolean              @default(false)
+  isActive           Boolean              @default(true)
+  sourceTextId       String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  conversationWisdom ConversationWisdom[]
+  sourceText         StoicText?           @relation("TextToWisdom", fields: [sourceTextId], references: [id])
+
+  @@map("stoic_wisdom")
+}
+
+model RoundTableConversation {
+  id                String                  @id @default(cuid())
+  conversationId    String                  @unique
+  maxParticipants   Int                     @default(5)
+  currentSpeaker    String?
+  speakingOrder     Json
+  moderationStyle   String                  @default("DEMOCRATIC")
+  roundNumber       Int                     @default(1)
+  topicFocus        String?
+  userParticipation Boolean                 @default(false)
+  userRole          UserRole                @default(OBSERVER)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  conversation      Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  participants      RoundTableParticipant[]
+
+  @@map("round_table_conversations")
+}
+
+model RoundTableParticipant {
+  id              String                 @id @default(cuid())
+  roundTableId    String
+  modelId         String?
+  participantType ParticipantType
+  speakingOrder   Int
+  isActive        Boolean                @default(true)
+  lastSpoke       DateTime?
+  messageCount    Int                    @default(0)
+  joinedAt        DateTime               @default(now())
+  model           Model?                 @relation(fields: [modelId], references: [id])
+  roundTable      RoundTableConversation @relation(fields: [roundTableId], references: [id], onDelete: Cascade)
+
+  @@unique([roundTableId, modelId])
+  @@map("round_table_participants")
+}
+
+model ConversationText {
+  id             String       @id @default(cuid())
+  conversationId String
+  textId         String
+  addedAt        DateTime     @default(now())
+  addedBy        String?
+  relevanceNote  String?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  text           StoicText    @relation(fields: [textId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, textId])
+  @@map("conversation_texts")
+}
+
+model ConversationWisdom {
+  id             String       @id @default(cuid())
+  conversationId String
+  wisdomId       String
+  addedAt        DateTime     @default(now())
+  addedBy        String?
+  contextNote    String?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  wisdom         StoicWisdom  @relation(fields: [wisdomId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, wisdomId])
+  @@map("conversation_wisdom")
+}
+
+model ConversationExport {
+  id             String       @id @default(cuid())
+  conversationId String
+  exportFormat   ExportFormat
+  fileName       String
+  filePath       String?
+  metadata       Json?
+  exportedAt     DateTime     @default(now())
+  exportedBy     String?
+  downloadCount  Int          @default(0)
+  isPublic       Boolean      @default(false)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("conversation_exports")
+}
+
+model SavedConversation {
+  id             String       @id @default(cuid())
+  conversationId String       @unique
+  customName     String?
+  description    String?
+  tags           String[]     @default([])
+  metadata       Json?
+  savedAt        DateTime     @default(now())
+  savedBy        String?
+  lastModified   DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("saved_conversations")
+}
+
+model ArchivedConversation {
+  id              String       @id @default(cuid())
+  conversationId  String       @unique
+  archiveReason   String?
+  archiveMetadata Json?
+  archivedAt      DateTime     @default(now())
+  archivedBy      String?
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("archived_conversations")
+}
+
+model KnowledgeDocument {
+  id                     String       @id @default(cuid())
+  originalConversationId String
+  title                  String
+  content                String
+  summary                String?
+  keyInsights            String[]     @default([])
+  tags                   String[]     @default([])
+  participants           String[]     @default([])
+  sessionGoal            String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  createdBy              String?
+  sourceMetadata         Json?
+  documentType           String       @default("CONVERSATION_SUMMARY")
+  conversation           Conversation @relation(fields: [originalConversationId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_documents")
+}
+
+model TruthAssessment {
+  id               String              @id @default(cuid())
+  messageId        String              @unique
+  conversationId   String
+  assessmentType   TruthAssessmentType @default(COMPREHENSIVE)
+  overallScore     Float
+  reliabilityScore Float
+  accuracyScore    Float
+  consistencyScore Float
+  analysisContent  String
+  confidenceLevel  Float
+  methodology      String
+  processingTime   Int?
+  checkedAt        DateTime            @default(now())
+  checkedBy        String?
+  detectedIssues   DetectedIssue[]
+  truthAlerts      TruthAlert[]
+  conversation     Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message          Message             @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("truth_assessments")
+}
+
+model DetectedIssue {
+  id              String          @id @default(cuid())
+  assessmentId    String
+  messageId       String
+  issueType       IssueType
+  severityLevel   SeverityLevel
+  title           String
+  description     String
+  explanation     String
+  suggestedAction String?
+  confidence      Float
+  textLocation    String?
+  contextBefore   String?
+  contextAfter    String?
+  detectedAt      DateTime        @default(now())
+  isResolved      Boolean         @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  assessment      TruthAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  message         Message         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("detected_issues")
+}
+
+model TruthAlert {
+  id               String          @id @default(cuid())
+  assessmentId     String
+  messageId        String
+  conversationId   String
+  alertType        AlertType
+  severityLevel    SeverityLevel
+  title            String
+  message          String
+  triggerThreshold Float
+  actualValue      Float
+  isActionRequired Boolean         @default(false)
+  actionTaken      String?
+  triggeredAt      DateTime        @default(now())
+  isAcknowledged   Boolean         @default(false)
+  acknowledgedAt   DateTime?
+  acknowledgedBy   String?
+  isDismissed      Boolean         @default(false)
+  dismissedAt      DateTime?
+  dismissedBy      String?
+  assessment       TruthAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  conversation     Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMessage    Message         @relation("MessageAlerts", fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("truth_alerts")
+}
+
+model TruthCheckerModel {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  version         String    @default("1.0")
+  baseModel       String
+  provider        String
+  specialization  String[]  @default([])
+  systemPrompt    String
+  detectionRules  Json
+  thresholds      Json
+  assessmentCount Int       @default(0)
+  averageAccuracy Float?
+  lastUsed        DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?
+
+  @@map("truth_checker_models")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum MessageType {
+  AI
+  HUMAN
+  SYSTEM
+  MODERATOR
+  TRUTH_CHECKER
+}
+
+enum AnalyzerStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum PersonaType {
+  CREATIVE
+  NOVELTY
+  EDGE_CASE
+  RECURSIVE_LOGIC
+  CUSTOM
+}
+
+enum ApplicationMode {
+  REGULAR
+  STOIC
+  SECURITY
+}
+
+enum WisdomType {
+  QUOTE
+  EXERCISE
+  MEDITATION
+  REFLECTION
+  PRINCIPLE
+  PRACTICE
+}
+
+enum UserRole {
+  OBSERVER
+  PARTICIPANT
+  MODERATOR
+  FACILITATOR
+}
+
+enum ParticipantType {
+  AI_STOIC
+  HUMAN_USER
+  SYSTEM_MODERATOR
+}
+
+enum ExportFormat {
+  PDF
+  MARKDOWN
+  TXT
+  HTML
+  JSON
+}
+
+enum TruthAssessmentType {
+  COMPREHENSIVE
+  FACTUAL_ONLY
+  LOGICAL_ONLY
+  CONSISTENCY_ONLY
+  DECEPTION_ONLY
+  QUICK_SCAN
+}
+
+enum IssueType {
+  FACTUAL_INACCURACY
+  LOGICAL_INCONSISTENCY
+  HALLUCINATION
+  DECEPTION
+  UNSUPPORTED_CLAIM
+  FABRICATED_DATA
+  CIRCULAR_REASONING
+  MISLEADING_STATEMENT
+  EVASIVE_RESPONSE
+  INCONSISTENT_NARRATIVE
+  MANIPULATIVE_LANGUAGE
+  SPECULATION_AS_FACT
+  OUTDATED_INFORMATION
+  MISREPRESENTATION
+  OVERGENERALIZATION
+}
+
+enum SeverityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertType {
+  ACCURACY_WARNING
+  RELIABILITY_ALERT
+  DECEPTION_DETECTED
+  HALLUCINATION_ALERT
+  CONSISTENCY_VIOLATION
+  FACTUAL_ERROR
+  LOGICAL_FALLACY
+  CREDIBILITY_CONCERN
+  VERIFICATION_NEEDED
+  CRITICAL_ISSUE
+}
